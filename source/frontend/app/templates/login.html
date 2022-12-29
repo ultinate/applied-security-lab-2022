@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Log In for CA users{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  {% from "_formhelpers.html" import render_field %}
+  <form method="post">
+      {{ form.hidden_tag() }}
+      {{ render_field(form.email) }}
+      {{ render_field(form.password) }}
+      <dt><label>captcha</label></dt>
+      <dd>{{ captcha_html(captcha)|safe }}</dd>
+    <input type="submit" value="Log In">
+  </form>
+
+<p>To log in using a client certificate, you need to include your certificate in
+your browser. If done correctly, you will be logged in by clicking the button below.</p>
+<p><b>Note:</b> If you have selected a certificate in your browser and want to select a different certificate, you might need to close your browser and reopen it again. This also applies, if you clicked on "cancel" to not send a certificate.</p>
+<p><a href="{{ url_for ('login_cert') }}"><span class="button">Cert Login</span></a></p>
+<h2>CA Administrators</h2>
+<p>CA administrators must use certificate-based authentication.</p>
+<p><a href="{{ url_for ('admin_interface') }}"><span class="button">Admin Login</span></a></p>
+{% endblock %}

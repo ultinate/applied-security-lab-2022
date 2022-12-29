@@ -1,0 +1,7 @@
+flask
+flask_simple_captcha
+flask_wtf
+gunicorn
+python-secrets
+requests
+Flask-CacheControl

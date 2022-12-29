@@ -1,0 +1,12 @@
+[Unit]
+Description=The Frontend CA web application.
+
+[Service]
+Type=simple
+User=frontend
+WorkingDirectory=/usr/local/frontend
+ExecStart=/bin/bash /usr/local/frontend/run.sh
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

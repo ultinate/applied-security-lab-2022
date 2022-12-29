@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+<h2>{{text_field}}</h2>
+</span><a class="button" href="{{ url_for('login') }}"><span class="pln">Return to login</span></a><span class="pln">
+{% endblock %}

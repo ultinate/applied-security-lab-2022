@@ -1,0 +1,28 @@
+# Use the default port
+Port 22
+
+# do fine logging
+LogLevel VERBOSE
+
+# disallow root login
+PermitRootLogin no
+# enable public key login
+PubkeyAuthentication yes
+AuthorizedKeysFile      .ssh/authorized_keys
+HostbasedAuthentication no
+IgnoreRhosts yes
+PasswordAuthentication no
+PermitEmptyPasswords no
+ChallengeResponseAuthentication no
+UsePAM yes
+
+# use this for the jumps
+AllowAgentForwarding yes
+GatewayPorts no
+X11Forwarding no
+PrintMotd no
+AcceptEnv LANG LC_*
+
+# We need the group vagrant, else we cannot provision anymore
+AllowUsers sysadmin vagrant
+

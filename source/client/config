@@ -1,0 +1,27 @@
+Host frontend
+    HostName imovies.ch
+    IdentityFile ~/.ssh/ssh_credentials/id_frontend_sysadmin
+    User sysadmin
+
+Host jumphost
+    HostName imovies.ch
+    IdentityFile ~/.ssh/ssh_credentials/id_jumphost
+    User jumphost
+
+Host database
+    HostName database.imovies.ch
+    IdentityFile ~/.ssh/ssh_credentials/id_database_sysadmin
+    User sysadmin
+    ProxyJump jumphost
+
+Host core
+    HostName core.imovies.ch
+    IdentityFile ~/.ssh/ssh_credentials/id_core_sysadmin
+    User sysadmin
+    ProxyJump jumphost
+
+Host ca_backup
+    HostName backup.imovies.ch
+    IdentityFile ~/.ssh/ssh_credentials/id_backup_sysadmin
+    User sysadmin
+    ProxyJump jumphost

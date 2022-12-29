@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block header %}
+<h1>{% block title %}Your user information{% endblock %}</h1>
+{% endblock %}
+
+
+{% block content %}
+{% if user_info != None %}
+<div>
+    <h2>Modify user information</h2>
+    <p>To change your user information, please fill out the form below.</p>
+    <h3> Change Name</h3>
+    <form method="POST" action="{{ url_for('change_user_name') }}">
+        {{ user_name.hidden_tag() }}
+        {{ user_name.firstname.label }} {{ user_name.firstname(size=64) }}
+        {{ user_name.lastname.label }} {{ user_name.lastname(size=64) }}
+        <input type="submit" value="Update firstname and lastname">
+    </form>
+    <h3> Change Email</h3>
+    <p>This option was disabled by the administrator. Please contact your administrator to change the email address.</p>
+    <h3> Change Password</h3>
+    <p>Your password must be at least 8 characters long, as well as contain at least 1 capital letter, 1 lower-case letter, 1 numeral and 1 special character.</p>
+    <form method="POST" action="{{ url_for('change_password') }}">
+        {{ password_form.hidden_tag() }}
+        {{ password_form.old_password.label }} {{ password_form.old_password() }}
+        {{ password_form.new_password.label }} {{ password_form.new_password() }}
+        {{ password_form.new_password_confirm.label }} {{ password_form.new_password_confirm() }}
+        <input type="submit" value="Change password">
+    </form>
+</div>
+<div>
+    <h2>Certificate management</h2>
+    <p>Use your certificates for certificate-based login.</p>
+    <h3>Issue a new certificate</h3>
+    <p>You can have a maximum of one valid certificate at a time. Issuing a new certificate will revoke a previously
+        valid certificate (if it exists).</p>
+    {% from "_formhelpers.html" import render_field %}
+    <form method="post" action="{{ url_for ('issue_cert') }}">
+        {{ cert_issue_form.hidden_tag() }}
+        <input type="submit" value="Issue Certificate">
+    </form>
+    <h3>Overview of your certificates</h3>
+    {% if user_certs %}
+    <p>To download the currently valid certificate, click on the download button. Your browser will download the <strong>encrypted</strong> certificate. To display the corresponding key-phrase, click the button 'Show one-time password'. The
+        password will then be displayed at the top of the page until the page is reloaded. Afterwards, it cannot be retrieved anymore. To get a pass-phrase, you need to click the download button again and get a newly encrypted certificate
+        with a new key-phrase.</p>
+    <p>To download a revoked certificate, contact your administrator</p>
+    <table>
+        <thead>
+        <tr>
+            <th>ID (hex)</th>
+            <th>Status</th>
+            <th>User</th>
+            <th>Download</th>
+            <th>Revoke</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for cert in user_certs %}
+        <tr>
+            <td>{{ cert.id }}</td>
+            <td>{{ cert.status }}</td>
+            <td>{{ cert.name }}</td>
+            <td>{% if cert.status == "valid" %}
+                </span><a class="button" href="{{ url_for ('download_cert', cert_id=cert.id) }}" download="cert_{{cert.id}}.p12"><span class="pln">Download</span></a><span class="pln">
+                </span><a class="button" href="."><span class="pln">Show one-time password</span></a><span class="pln">
+                {% endif %}
+            </td>
+            <td>{% if cert.status == "valid" %}
+                <form method="post" action="{{ url_for ('revoke_cert', cert_id=cert.id) }}">
+                    {{ cert_issue_form.hidden_tag() }}
+                    <input type="submit" value="Revoke">
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No certificates to display. Either there are none or the backend cannot be reached.</p>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

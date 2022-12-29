@@ -1,0 +1,15 @@
+Host frontend.imovies.ch imovies.ch
+    HostName imovies.ch
+    IdentityFile ~/.ssh/ssh_credentials/id_frontend_sysadmin
+
+Host database.imovies.ch db.imovies.ch db.imovies.ch
+    HostName database.imovies.ch
+    IdentityFile ~/.ssh/ssh_credentials/id_database_sysadmin
+
+Host core.imovies.ch
+    IdentityFile ~/.ssh/ssh_credentials/id_core_sysadmin
+
+Host *
+  User sysadmin
+  IdentitiesOnly=yes
+  StrictHostKeyChecking=no

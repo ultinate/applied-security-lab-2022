@@ -1,0 +1,11 @@
+[Unit]
+Description=The Core CA web application.
+
+[Service]
+User=gunicorn
+Group=www-data
+Type=simple
+ExecStart=/bin/bash /usr/local/core/run.sh
+
+[Install]
+WantedBy=multi-user.target

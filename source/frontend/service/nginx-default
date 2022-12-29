@@ -1,0 +1,115 @@
+server {
+    listen          80;
+    server_name     imovies.ch;
+    return        301 https://imovies.ch$request_uri;
+}
+
+server {
+    listen              443 ssl;
+    server_name         imovies.ch;
+
+    access_log      /var/log/nginx/ssl-access.log;
+    error_log       /var/log/nginx/ssl-error.log info; # debug
+
+    ssl_certificate             /mnt/hsm/imovies.ch.chained.cert.pem;
+    ssl_certificate_key         /mnt/hsm/imovies.ch.key.pem;
+    ssl_verify_client           off;
+
+    # Follow most of https://ssl-config.mozilla.org/ recommendations
+    ssl_protocols               TLSv1.3;
+    ssl_prefer_server_ciphers   off;
+    ssl_session_timeout         1d;
+    ssl_session_cache           shared:MozSSL:10m;  # about 40000 sessions
+    ssl_session_tickets         off;
+    add_header                  Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+
+    proxy_connect_timeout       10s; # timeout of the session in sec
+
+    # Error pages
+    error_page 400 401 402 403 404 405 406 407 408 409 410 411 412 413 414 415 416 417 418 421 422 423 424 425 426 428 429 431 451 495 496 497 500 501 502 503 504 505 506 507 508 510 511 /error.html;
+    location = /error.html {
+      ssi on;
+      internal;
+      auth_basic off;
+      root /var/www/html;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:5000/;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Prefix /;
+    }
+}
+server {
+    listen              443 ssl;
+    server_name         cert.imovies.ch;
+
+    access_log      /var/log/nginx/ssl-access.log;
+    error_log       /var/log/nginx/ssl-error.log info; # debug
+
+    ssl_certificate             /mnt/hsm/cert.imovies.ch.chained.cert.pem;
+    ssl_certificate_key         /mnt/hsm/cert.imovies.ch.key.pem;
+
+    ssl_verify_client           on;
+    ssl_crl                     /usr/local/frontend/crl/ca_intermediate_usr_combined.crl.pem;
+    ssl_client_certificate      /mnt/hsm/ca_intermediate_usr.cert.pem;
+    ssl_trusted_certificate     /mnt/hsm/ca-chain_usr.cert.pem;
+    ssl_verify_depth            3;
+
+    # Follow most of https://ssl-config.mozilla.org/ recommendations
+    ssl_protocols               TLSv1.3;
+    ssl_prefer_server_ciphers   off;
+    ssl_session_timeout         1d;
+    ssl_session_cache           off;
+    ssl_session_tickets         off;
+    add_header                  Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+
+    proxy_connect_timeout       10s; # timeout of the session in sec
+
+    # Error pages
+    error_page 400 401 402 403 404 405 406 407 408 409 410 411 412 413 414 415 416 417 418 421 422 423 424 425 426 428 429 431 451 495 496 497 500 501 502 503 504 505 506 507 508 510 511 /error.html;
+    location = /error.html {
+      ssi on;
+      internal;
+      auth_basic off;
+      root /var/www/html;
+    }
+
+
+    # the cert-login page requires the Certificate Information
+    location /login_cert {
+        if ($ssl_client_verify != SUCCESS) {
+            return 403;
+        }
+        proxy_pass http://127.0.0.1:5000/login_cert;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Prefix /;
+        proxy_set_header SSL_Client_Verify $ssl_client_verify;
+        proxy_set_header SSL_Client $ssl_client_s_dn;
+        proxy_set_header SSL-Client-Serial $ssl_client_serial;
+    }
+
+    # require cert for admin interface
+    location /admin {
+        if ($ssl_client_verify != SUCCESS) {
+            return 403;
+        }
+        proxy_pass http://127.0.0.1:5000/admin;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Prefix /;
+        proxy_set_header SSL_Client_Verify $ssl_client_verify;
+        proxy_set_header SSL_Client $ssl_client_s_dn;
+        proxy_set_header SSL-Client-Serial $ssl_client_serial;
+    }
+
+    location /{
+        return 404;
+    }
+}
+

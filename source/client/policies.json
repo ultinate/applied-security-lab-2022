@@ -1,0 +1,13 @@
+{
+  "policies": {
+    "Homepage": {
+      "URL": "https://imovies.ch/"
+    },
+    "Certificates": {
+        "ImportEnterpriseRoots": true,
+        "Install": [
+                   "/mnt/hsm/ca_root.cert.pem"
+                   ]
+                }
+  }
+}

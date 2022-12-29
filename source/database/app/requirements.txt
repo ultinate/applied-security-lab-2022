@@ -1,0 +1,8 @@
+bcrypt
+flask
+flask-restful
+gunicorn
+jsonschema
+mysql-connector-python
+pycryptodome
+pyyaml

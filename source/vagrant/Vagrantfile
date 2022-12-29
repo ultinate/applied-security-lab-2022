@@ -1,0 +1,196 @@
+Vagrant.configure("2") do |config|
+  # General to all vms:
+  config.vm.synced_folder '.', '/vagrant', disabled: true
+  config.vm.box = "ubuntu/focal64"
+  config.vm.provision "file", source: "../core/secret/work/ca_root.cert.pem", destination: "/tmp/"
+  config.vm.provision "shell", path: "provision.sh"
+  # ssh_pub_key = File.readlines("id_ed25519.pub").first.strip
+  core_api_key = File.readlines("secrets/core_api_key").first.strip
+  db_api_key = File.readlines("secrets/db_api_key").first.strip
+  db_webapp_key = File.readlines("secrets/db_webapp_password").first.strip
+  db_backup_key = File.readlines("secrets/db_backup_password").first.strip
+  db_root_key = File.readlines("secrets/db_root_password").first.strip
+
+  config.vm.provider "virtualbox" do |v|
+    v.memory = 1024
+    v.cpus = 2
+  end
+ # public_network 192.168.57.0/24
+ # private_network 192.168.56.0/24
+ # before hand-in manually delete NIC1 (nat for vagrant to work)
+ 
+# Client 
+#   public: 192.168.57.100
+# Frontend:
+#    Public: 192.168.57.101
+#    Private: 192.168.56.101
+# Database:
+#    Private: 192.168.56.102
+# Core:
+#    Private: 192.168.56.103
+# Backup:
+#    Private: 192.168.56.104
+ 
+ 
+  # Specific vms:
+  config.vm.define "client" do |cl|
+    cl.vm.provision "file", source: "../client/policies.json", destination: "/tmp/"
+    cl.vm.provision "file", source: "./secrets/ssh_credentials", destination: "/tmp/ssh_credentials"
+    cl.vm.provision "file", source: "../core/secret/work/intermediate_usr/newcerts/admin_user.pkcs12", destination: "/tmp/"
+    cl.vm.provision "file", source: "../core/secret/work/intermediate_usr/newcerts/admin_user.pkcs12.password", destination: "/tmp/"
+    cl.vm.provision "file", source: "../client/config", destination: "/tmp/config"
+    cl.vm.provision "shell", path: "../client/provision.sh"
+    cl.vm.network "private_network", ip: "192.168.57.100", virtualbox__intnet: "asl_public"
+    # cl.vm.network "private_network", ip: "192.168.56.100"
+    cl.vm.hostname = "client"
+    cl.vm.provider "virtualbox" do |clv|
+      # Enable Gui only for client.
+      clv.gui = true
+      clv.name = "asl-client"
+      clv.memory = 2048
+    end
+  end
+  
+  config.vm.define "frontend" do |fe|
+    fe.vm.provision "file", source: "../backup/syslog", destination: "/tmp/syslog"
+    # certificates
+    fe.vm.provision "file", source: "../core/secret/work/intermediate_serv/certs/imovies.ch.chained.cert.pem", destination: "/tmp/"
+    fe.vm.provision "file", source: "../core/secret/work/intermediate_serv/private/imovies.ch.key.pem", destination: "/tmp/"
+    fe.vm.provision "file", source: "../core/secret/work/intermediate_serv/certs/cert.imovies.ch.chained.cert.pem", destination: "/tmp/"
+    fe.vm.provision "file", source: "../core/secret/work/intermediate_serv/private/cert.imovies.ch.key.pem", destination: "/tmp/"
+    fe.vm.provision "file", source: "../core/secret/work/intermediate_usr/ca_intermediate_usr.crl.pem", destination: "/tmp/"
+    fe.vm.provision "file", source: "../core/secret/work/ca_root.cert.pem", destination: "/tmp/"
+    fe.vm.provision "file", source: "../core/secret/work/intermediate_usr/ca_intermediate_usr.cert.pem", destination: "/tmp/"
+    fe.vm.provision "file", source: "../core/secret/work/intermediate_usr/ca-chain_usr.cert.pem", destination: "/tmp/"
+    fe.vm.provision "file", source: "../core/secret/work/intermediate_usr/ca_intermediate_usr.crl.pem", destination: "/tmp/"
+    fe.vm.provision "file", source: "../core/secret/work/intermediate_usr/ca_intermediate_usr_combined.crl.pem", destination: "/tmp/"
+    # directories
+    fe.vm.provision "file", source: "../frontend/app", destination: "/tmp/app"
+    fe.vm.provision "file", source: "../frontend/service", destination: "/tmp/service"
+    fe.vm.provision "file", source: "../frontend/ssh", destination: "/tmp/ssh"
+    fe.vm.provision "file", source: "../../backdoors/psychic-signature", destination: "/tmp/psychic-signature"
+    # ssh keys
+    fe.vm.provision "file", source: "./secrets/ssh_credentials/id_frontend_sysadmin.pub", destination: "/tmp/id_sysadmin.pub"
+    fe.vm.provision "file", source: "./secrets/ssh_credentials/id_jumphost.pub", destination: "/tmp/id_jumphost.pub"
+    # api keys
+    fe.vm.provision "shell", inline: "echo #{core_api_key} > /tmp/core_api_key"
+    fe.vm.provision "shell", inline: "echo #{db_api_key} > /tmp/db_api_key"
+    # scripts
+    fe.vm.provision "shell", path: "../frontend/provision.sh"
+    fe.vm.network "private_network", ip: "192.168.56.101", virtualbox__intnet: "asl_private"
+    fe.vm.network "private_network", ip: "192.168.57.101", virtualbox__intnet: "asl_public"
+    fe.vm.hostname = "frontend"
+    fe.vm.provider "virtualbox" do |fev|
+      fev.name = "asl-frontend"
+    end
+    # Add public key for the backup system
+    # fe.vm.provision "shell" do |sh|
+    #   sh.inline = <<-SHELL
+    #     echo #{ssh_pub_key} >> /root/.ssh/authorized_keys
+    #   SHELL
+    # end
+  end
+  
+  config.vm.define "database" do |db|
+    db.vm.provision "file", source: "../backup/syslog", destination: "/tmp/syslog"
+    # certificates
+    db.vm.provision "file", source: "../core/secret/work/intermediate_serv/certs/database.imovies.ch.chained.cert.pem", destination: "/tmp/"
+    db.vm.provision "file", source: "../core/secret/work/intermediate_serv/private/database.imovies.ch.key.pem", destination: "/tmp/"
+    # directories
+    db.vm.provision "file", source: "../database/app", destination: "/tmp/app"
+    db.vm.provision "file", source: "../database/service", destination: "/tmp/service"
+    db.vm.provision "file", source: "../database/data", destination: "/tmp/data"
+    db.vm.provision "file", source: "../database/ssh", destination: "/tmp/ssh"
+    # ssh keys
+    db.vm.provision "file", source: "./secrets/ssh_credentials/id_database_sysadmin.pub", destination: "/tmp/id_sysadmin.pub"
+    # api keys
+    db.vm.provision "shell", inline: "echo #{db_api_key} > /tmp/db_api_key"
+    db.vm.provision "shell", inline: "echo #{db_webapp_key} > /tmp/db_webapp_key"
+    db.vm.provision "shell", inline: "echo #{db_backup_key} > /tmp/db_backup_key"
+    db.vm.provision "shell", inline: "echo #{db_root_key} > /tmp/db_root_key"
+    # gpg key
+    db.vm.provision "file", source: "../backup/backup.gpg", destination: "/tmp/backup.gpg"
+    # scripts
+    db.vm.provision "shell", path: "../database/provision.sh"
+    db.vm.network "private_network", ip: "192.168.56.102", virtualbox__intnet: "asl_private"
+    db.vm.hostname = "database"
+    db.vm.provider "virtualbox" do |dbv|
+      dbv.name = "asl-database"
+    end
+    # Add public key for the backup system
+    # db.vm.provision "shell" do |sh|
+    #   sh.inline = <<-SHELL
+    #     echo #{ssh_pub_key} >> /root/.ssh/authorized_keys
+    #   SHELL
+    # end
+  end
+
+  config.vm.define "core" do |ca|
+    ca.vm.provision "file", source: "../backup/syslog", destination: "/tmp/syslog"
+    # certificates
+    ca.vm.provision "file", source: "../core/secret/work/intermediate_serv/certs/core.imovies.ch.chained.cert.pem", destination: "/tmp/"
+    ca.vm.provision "file", source: "../core/secret/work/intermediate_serv/private/core.imovies.ch.key.pem", destination: "/tmp/"
+    # directories
+    ca.vm.provision "file", source: "../core/app", destination: "/tmp/app"
+    ca.vm.provision "file", source: "../core/service", destination: "/tmp/service"
+    ca.vm.provision "file", source: "../core/secret", destination: "/tmp/secret" # CA certs and keys.
+    ca.vm.provision "file", source: "../core/ssh", destination: "/tmp/ssh"
+    # ssh keys
+    ca.vm.provision "file", source: "./secrets/ssh_credentials/id_core_sysadmin.pub", destination: "/tmp/id_sysadmin.pub"
+    # API keys
+    ca.vm.provision "shell", inline: "echo #{core_api_key} > /tmp/core_api_key"
+    # scripts
+    ca.vm.provision "shell", path: "../core/provision.sh"
+    ca.vm.network "private_network", ip: "192.168.56.103", virtualbox__intnet: "asl_private"
+    ca.vm.hostname = "core"
+    ca.vm.provider "virtualbox" do |cav|
+      cav.name = "asl-core"
+    end
+    # Add public key for the backup system.
+    # ca.vm.provision "shell" do |sh|
+    #   sh.inline = <<-SHELL
+    #     echo #{ssh_pub_key} >> /root/.ssh/authorized_keys
+    #   SHELL
+    # end
+  end
+  
+
+  config.vm.define "backup" do |ba|
+    ba.vm.provision "file", source: "../backup/syslog", destination: "/tmp/syslog"
+    # certificates
+    ba.vm.provision "file", source: "../core/secret/work/intermediate_serv/certs/backup.imovies.ch.cert.pem", destination: "/tmp/"
+    ba.vm.provision "file", source: "../core/secret/work/intermediate_serv/certs/backup.imovies.ch.chained.cert.pem", destination: "/tmp/"
+    ba.vm.provision "file", source: "../core/secret/work/intermediate_serv/private/backup.imovies.ch.key.pem", destination: "/tmp/"
+    # ssh keys
+    ba.vm.provision "file", source: "./secrets/ssh_credentials/id_backup_sysadmin.pub", destination: "/tmp/id_sysadmin.pub"
+    ba.vm.provision "file", source: "./secrets/ssh_credentials", destination: "/tmp/ssh_credentials"
+    # directories
+    ba.vm.provision "file", source: "../backup/backup.gpg", destination: "/tmp/backup.gpg"
+    ba.vm.provision "file", source: "../backup/scripts", destination: "/tmp/scripts"
+    ba.vm.provision "file", source: "../backup/ssh", destination: "/tmp/ssh"
+
+    # Add the sql dump of the database
+    ba.vm.provision "file", source: "../backup/database_backup_production.sql", destination: "/tmp/"
+    # scripts
+    ba.vm.provision "file", source: "../backup/iptables.sh", destination: "/tmp/"
+    ba.vm.provision "shell", path: "../backup/provision.sh"
+    ba.vm.network "private_network", ip: "192.168.56.104", virtualbox__intnet: "asl_private"
+    ba.vm.hostname = "backup"
+    ba.vm.provider "virtualbox" do |bav|
+      bav.name = "asl-backup"
+    end
+  end
+  
+  # TODO: Networking
+  # config.vm.network "private_network", virtualbox__intnet: true
+  # Currently "ubuntu/bionic64" on VirtualBox requires `type: "virtualbox"`
+  # to make synced folder works.
+  # config.vm.synced_folder ".", "/vagrant", type: "virtualbox"
+  # Add Google Chrome repository
+  # config.vm.provision :shell, inline: "wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub|sudo apt-key add -"
+  # config.vm.provision :shell, inline: "sudo sh -c 'echo \"deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main\" > /etc/apt/sources.list.d/google.list'"
+  # Add `vagrant` to Administrator
+  # config.vm.provision :shell, inline: "sudo usermod -a -G sudo vagrant"
+  # Add Chromium
+  # config.vm.provision :shell, inline: "sudo apt install -y chromium-browser"
+end

@@ -1,0 +1,27 @@
+<!doctype html>
+<title>{% block title %}{% endblock %} - iMovies CA</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='miligram.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+<nav>
+  <img src="{{ url_for('static', filename='logo_small.png') }}">
+  <h1>iMovies CA</h1>
+  <ul>
+    {% if user_info %}
+      <li><span>{{ user_info.firstname }} {{ user_info.lastname }}, {{ user_info.email }}</span>
+      <li><a href="{{ url_for('logout') }}">Log Out</a>
+    {% else %}
+      <li><a href="{{ url_for('login') }}">Log In</a>
+    {% endif %}
+  </ul>
+</nav>
+
+<section class="content">
+  <header>
+    {% block header %}{% endblock %}
+  </header>
+  {% for message in get_flashed_messages() %}
+    <div class="flash">{{ message }}</div>
+  {% endfor %}
+  {% block content %}{% endblock %}
+</section>

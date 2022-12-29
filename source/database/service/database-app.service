@@ -1,0 +1,11 @@
+[Unit]
+Description=The DB service web application.
+
+[Service]
+User=database
+Group=database
+Type=simple
+ExecStart=/bin/bash /usr/local/database/run.sh
+
+[Install]
+WantedBy=multi-user.target
